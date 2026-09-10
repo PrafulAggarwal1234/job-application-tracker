@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Job Application Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Applications <span id="count" class="count">0</span></h1>
+    <button id="export" class="ghost" type="button" title="Download all applications as CSV">Export CSV</button>
+  </header>
+
+  <section class="capture">
+    <div id="page-title" class="page-title">Reading this page…</div>
+    <button id="save" class="primary" type="button">+ Save this page</button>
+    <div id="notice" class="notice" hidden></div>
+  </section>
+
+  <ul id="list" class="list"></ul>
+
+  <p id="empty" class="empty" hidden>
+    Nothing tracked yet. Open a job posting and hit <strong>Save this page</strong>.
+  </p>
+
+  <footer>🔒 Stored only in this browser. Nothing is uploaded, ever.</footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
