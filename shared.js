@@ -94,6 +94,15 @@ function normalizeUrl(raw) {
       'originalSubdomain', 'src', 'from', 'gclid', 'fbclid', 'gh_src',
       'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
     ]) url.searchParams.delete(key);
+    // The same LinkedIn posting is reachable as /jobs/view/<id> and as a search
+    // page carrying currentJobId=<id>. Collapse both to one form so saving from
+    // either place counts as the same application.
+    const jobId = url.searchParams.get('currentJobId');
+    if (jobId && /(^|\.)linkedin\.com$/i.test(url.hostname)) {
+      return `https://www.linkedin.com/jobs/view/${jobId}`;
+    }
+    url.searchParams.delete('currentJobId');
+
     return url.toString().replace(/\/$/, '');
   } catch (e) {
     return raw || '';

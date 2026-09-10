@@ -20,7 +20,6 @@
     'we have received your application',
     'application submitted successfully',
     'you have successfully applied',
-    'successfully applied',
     'thank you for applying',
     'thanks for applying',
   ];
@@ -34,8 +33,12 @@
   ];
 
   // A single posting, as opposed to a search page or the "jobs I applied to" list.
+  // Matched against hostname + pathname + search, so the patterns below may name
+  // a host. LinkedIn keeps the posting in currentJobId when you apply from the
+  // search or collections view, where the path never becomes /jobs/view/<id>.
   const JOB_URL = [
     /\/jobs?\/view\//i,
+    /[?&]currentJobId=\d+/i,
     /\/viewjob\b/i,
     /\/job-listings?[-/]/i,
     /\/jobs?\/[0-9a-f-]{6,}/i,
@@ -43,6 +46,7 @@
     /greenhouse\.io\/.+\/jobs?\//i,
     /lever\.co\/[^/]+\/[0-9a-f-]{8,}/i,
     /ashbyhq\.com\/[^/]+\//i,
+    /myworkdayjobs\.com\/.+\/job\//i,
   ];
 
   const reported = new Set();
@@ -55,8 +59,8 @@
   };
 
   function looksLikeJobPage() {
-    const path = location.pathname + location.search;
-    if (JOB_URL.some((r) => r.test(path))) return true;
+    const target = location.hostname + location.pathname + location.search;
+    if (JOB_URL.some((r) => r.test(target))) return true;
     // Careers pages that describe themselves properly.
     for (const node of document.querySelectorAll('script[type="application/ld+json"]')) {
       if ((node.textContent || '').includes('JobPosting')) return true;

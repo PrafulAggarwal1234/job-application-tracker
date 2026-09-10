@@ -15,26 +15,24 @@ Add findings under **Found while testing** as you hit them; no need to be tidy a
       not survive a misclick-then-click-away — and a deleted posting cannot be reconstructed, since
       its URL goes with it.
 
+- [x] **Auto-detect missed most LinkedIn applications.** Easy Apply usually runs from the search or
+      collections page, where the URL keeps the posting in `currentJobId` and the path never becomes
+      `/jobs/view/<id>` — so `looksLikeJobPage()` rejected it and the confirmation was ignored.
+      A `currentJobId` parameter now qualifies, and `normalizeUrl()` collapses both URL forms to the
+      same posting so saving from either place is not counted twice.
+      *Confirmed end-to-end* against a page served on a real `www.linkedin.com` origin.
+
+- [x] **The Greenhouse / Lever / Ashby patterns could never match.** They named a hostname but were
+      tested against the path alone. Gating now matches on hostname + path + query, and a Workday
+      pattern was added. Nine real URL shapes are asserted to qualify and six to be rejected.
+
+- [x] **Dropped the trigger phrase "successfully applied".** Too loose once search pages qualify — the
+      side pane can say it about a job applied to previously. The longer forms that confirmation
+      screens actually print are kept.
+
 ## Found while testing
 
 <!-- Add here. Format: what you did, what happened, what you expected. A URL helps a lot. -->
-
-- [ ] **Auto-detect will miss most LinkedIn applications.** `looksLikeJobPage()` gates phrase-based
-      detection on the URL looking like a single posting, and only `/jobs/view/<id>` qualifies. But
-      Easy Apply usually happens from the search or collections page, where the posting renders in a
-      side pane and the URL stays `/jobs/search/?currentJobId=<id>` or
-      `/jobs/collections/recommended/?currentJobId=<id>`. Neither matches, so the confirmation is
-      ignored.
-      *Fix:* treat a `currentJobId` query parameter as qualifying, and use it for dedupe so the same
-      posting saved from a search page and from its own page does not appear twice.
-
-- [ ] **The Greenhouse / Lever / Ashby patterns in `JOB_URL` can never match.** They include the
-      hostname (`/lever\.co\/[^/]+\/[0-9a-f-]{8,}/`) but are tested against `pathname + search`,
-      which has no hostname in it. So `jobs.lever.co/acme/<uuid>` does not qualify at all. Greenhouse
-      only passes by accident, via the generic `/\/jobs?\/[0-9a-f-]{6,}/` rule.
-      *Fix:* test the host separately from the path, or drop the hostname from those patterns.
-      *Note:* only affects the phrase path — these sites' confirmation URLs still trigger via
-      `URL_HINTS` (`/confirmation`, `/thanks`), which is the more common route for them.
 
 - [ ] …
 
@@ -56,9 +54,10 @@ marked; the rest are unknown, not broken.
 - [ ] Dark mode renders correctly
 
 **Auto-detect (v1.1 only, 7 sites)**
-- [ ] LinkedIn Easy Apply — fires on the confirmation
-- [ ] Does *not* fire while browsing the LinkedIn applied-jobs list *(the false positive I designed
-      against; tested synthetically, never live)*
+- [x] LinkedIn Easy Apply — fires on the confirmation *(covered by `test/e2e.test.js`, which serves
+      the page on a real `www.linkedin.com` origin via `--host-resolver-rules`, so the detector reads
+      genuine `location` values. Does not need a real application.)*
+- [x] Does *not* fire while browsing the LinkedIn applied-jobs list *(same suite)*
 - [ ] Naukri apply flow
 - [ ] Indeed apply flow
 - [ ] Greenhouse / Lever / Ashby confirmation page
