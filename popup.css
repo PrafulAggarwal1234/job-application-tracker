@@ -253,3 +253,15 @@ footer {
 .row-toggle strong { display: block; font-size: 12px; font-weight: 600; }
 .row-toggle em { display: block; font-size: 11px; font-style: normal; color: var(--muted); }
 .row-toggle:has(input:disabled) { cursor: default; opacity: .5; }
+
+/* an action inside the notice line, e.g. Undo after a delete */
+.link {
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+}
+.link:hover { filter: brightness(1.15); }

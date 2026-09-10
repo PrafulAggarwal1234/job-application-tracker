@@ -18,6 +18,7 @@ let apps = [];
 let pending = [];
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let current = null; // { company, role, url, title } for the active tab
+let lastDeleted = null; // { app, index } — recoverable while the popup stays open
 
 /* ---------- storage ---------- */
 
@@ -176,6 +177,24 @@ async function resolvePending(id, keep) {
   chrome.runtime.sendMessage({ type: 'badge-seen' }).catch(() => {});
 }
 
+function offerUndo(app) {
+  els.notice.textContent = '';
+  els.notice.hidden = false;
+  els.notice.classList.add('warn');
+
+  const label = document.createElement('span');
+  label.textContent = `Deleted ${app.company || app.role || 'that entry'}. `;
+
+  const undo = document.createElement('button');
+  undo.type = 'button';
+  undo.className = 'link';
+  undo.dataset.action = 'undo';
+  undo.textContent = 'Undo';
+  undo.addEventListener('click', undoDelete);
+
+  els.notice.append(label, undo);
+}
+
 function notify(message, isWarning) {
   els.notice.textContent = message || '';
   els.notice.hidden = !message;
@@ -244,10 +263,26 @@ async function updateFrom(target) {
 async function deleteFrom(button) {
   const li = button.closest('li[data-id]');
   if (!li) return;
-  apps = apps.filter((a) => a.id !== li.dataset.id);
+  const index = apps.findIndex((a) => a.id === li.dataset.id);
+  if (index === -1) return;
+
+  lastDeleted = { app: apps[index], index };
+  apps.splice(index, 1);
   await persist();
   render();
-  notify('Deleted.');
+  offerUndo(lastDeleted.app);
+}
+
+async function undoDelete() {
+  if (!lastDeleted) return;
+  const { app, index } = lastDeleted;
+  lastDeleted = null;
+
+  apps.splice(Math.min(index, apps.length), 0, app);
+  await persist();
+  render();
+  highlight(app.id);
+  notify('Restored.');
 }
 
 /* ---------- CSV ---------- */

@@ -16,6 +16,8 @@ lives in `chrome.storage.local` on your own machine.
   editable, so fix anything the guess got wrong by typing over it.
 - Track each application through **Applied → Interviewing → Rejected / Offer**.
 - Export everything to CSV for your own spreadsheet.
+- Deleting a row offers an **Undo** rather than a confirmation prompt — a confirm dialog taxes every
+  delete, an undo only costs you on the rare mistake. The undo lives as long as the popup stays open.
 
 ## Install from source
 
