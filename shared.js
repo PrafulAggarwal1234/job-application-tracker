@@ -19,11 +19,19 @@ const ALL_SITE_PATTERNS = SUPPORTED_SITES.reduce((acc, s) => acc.concat(s.patter
 
 const DETECT_SCRIPT_ID = 'jat-detector';
 
-function splitTitle(rawTitle) {
+function splitTitle(rawTitle, host) {
   const SITES = /\s*[|·—–\-]\s*(linkedin|naukri(\.com)?|indeed(\.com)?|glassdoor|monster|shine|instahyre|wellfound|angellist|greenhouse|lever|workday|ashby|careers?|jobs?|job search|hiring)\s*$/i;
 
   let t = (rawTitle || '').replace(/\s+/g, ' ').trim();
   while (SITES.test(t)) t = t.replace(SITES, '');
+
+  // Naukri reads "<Role> - <City> - <Company>[ - <N> to <M> years of experience]",
+  // so the company is the third dash-separated segment, not the second. Scoped by
+  // host because the same shape means something different elsewhere.
+  if (host && /(^|\.)naukri\.com$/i.test(host)) {
+    const parts = t.split(/\s+-\s+/);
+    if (parts.length >= 3) return { role: parts[0], company: parts[2] };
+  }
 
   let m = t.match(/^(.+?)\s+(?:is\s+)?hiring\s+(?:an?\s+)?(.+?)(?:\s+in\s+.+)?$/i);
   if (m) return { company: m[1], role: m[2] };
@@ -49,34 +57,6 @@ const tidy = (s) => (s || '').replace(/\s+/g, ' ').replace(/\s*[|·—–-]\s*$/
 // A company scraped out of a page title tends to keep a domain or a "Careers" tail.
 const tidyCompany = (s) =>
   tidy(tidy(s).replace(/\.(com|co|co\.in|in|io|ai|jobs|net|org)$/i, '').replace(/\s+(careers?|jobs?)$/i, ''));
-
-async function readActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return null;
-
-  let scraped = null;
-  try {
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['scrape.js'],
-    });
-    scraped = result && result.result;
-  } catch (e) {
-    // chrome:// pages, the Web Store, PDFs and file:// URLs cannot be injected into.
-    // Title + URL from the tab itself is still enough to save something useful.
-  }
-
-  const title = (scraped && scraped.title) || tab.title || '';
-  const url = (scraped && scraped.url) || tab.url || '';
-  const guess = splitTitle(title);
-
-  return {
-    title,
-    url,
-    role: tidy((scraped && scraped.role) || guess.role),
-    company: tidyCompany((scraped && scraped.company) || guess.company),
-  };
-}
 
 function todayISO() {
   const d = new Date();
@@ -111,7 +91,14 @@ function normalizeUrl(raw) {
 
 // Turns whatever scrape.js managed to read into the two fields we store.
 function resolveFields(payload) {
-  const guess = splitTitle((payload && payload.title) || '');
+  let host = '';
+  try {
+    host = new URL((payload && payload.url) || '').hostname;
+  } catch (e) {
+    host = '';
+  }
+
+  const guess = splitTitle((payload && payload.title) || '', host);
   return {
     role: tidy((payload && payload.role) || guess.role),
     company: tidyCompany((payload && payload.company) || guess.company),

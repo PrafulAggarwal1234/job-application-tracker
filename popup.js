@@ -36,6 +36,39 @@ async function persist() {
 
 
 
+/* ---------- page reading ---------- */
+
+async function readActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return null;
+
+  let scraped = null;
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['scrape.js'],
+    });
+    scraped = result && result.result;
+  } catch (e) {
+    // chrome:// pages, the Web Store, PDFs and file:// URLs cannot be injected into.
+    // Title + URL from the tab itself is still enough to save something useful.
+  }
+
+  const title = (scraped && scraped.title) || tab.title || '';
+  const url = (scraped && scraped.url) || tab.url || '';
+  // Same resolver the service worker uses, so a manually saved posting and an
+  // auto-detected one are parsed identically. The url matters: host-specific
+  // title rules key off it.
+  const fields = resolveFields({
+    title,
+    url,
+    role: scraped && scraped.role,
+    company: scraped && scraped.company,
+  });
+
+  return { title, url, role: fields.role, company: fields.company };
+}
+
 /* ---------- rendering ---------- */
 
 

@@ -30,6 +30,18 @@ Add findings under **Found while testing** as you hit them; no need to be tidy a
       side pane can say it about a job applied to previously. The longer forms that confirmation
       screens actually print are kept.
 
+- [x] **The popup and the service worker were parsing pages differently.** `readActiveTab()` had its
+      own copy of the title logic and never called `resolveFields()`, despite an earlier commit
+      claiming that function was the single source of truth — so host-specific rules applied to
+      auto-detected applications but not to manually saved ones. It also had drifted into
+      `shared.js`, which the service worker imports, so the worker carried popup-only tab code.
+      Both fixed, and `test/architecture.test.js` now fails the build if either recurs.
+
+- [x] **Naukri's page titles produced a garbage company.** Real titles read
+      `"Backend Engineer - Bengaluru - Verloop - 2 to 4 years of experience"`, so the generic dash
+      rule took the *city* as the company. The company is the third segment; there is now a
+      host-scoped rule, tested against four real Naukri titles.
+
 ## Found while testing
 
 <!-- Add here. Format: what you did, what happened, what you expected. A URL helps a lot. -->
@@ -43,8 +55,11 @@ marked; the rest are unknown, not broken.
 
 **Manual save**
 - [x] LinkedIn job posting — company + role read correctly *(confirmed on a live page)*
-- [ ] Naukri job posting — site-specific selectors unverified
-- [ ] Indeed job posting — site-specific selectors unverified
+- [ ] Naukri job posting — **CSS selectors still unverified**: naukri.com returns HTTP 403 to
+      automated requests, so this cannot be checked remotely. Its *title* fallback is now correct
+      against four real titles, so a wrong selector degrades rather than breaks. Needs a human to
+      open one posting and check the company and role fields.
+- [ ] Indeed job posting — **CSS selectors still unverified**, same reason as Naukri.
 - [ ] A Greenhouse / Lever / Ashby posting — exercises the JSON-LD path
 - [ ] A company careers page with no JSON-LD — exercises title parsing
 - [ ] Duplicate detection: click the icon twice on the same posting

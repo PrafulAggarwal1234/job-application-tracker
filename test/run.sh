@@ -4,7 +4,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 status=0
-for f in test/parse.test.js test/urls.test.js test/background.test.js test/detector.test.js test/e2e.test.js test/popup.test.js; do
+for f in test/architecture.test.js test/parse.test.js test/urls.test.js test/background.test.js test/detector.test.js test/e2e.test.js test/popup.test.js; do
   node "$f" || status=1
 done
 

@@ -23,7 +23,9 @@ const stub = `
       get: (keys) => { const o = {}; for (const k of [].concat(keys)) o[k] = window.__store[k]; return Promise.resolve(o); },
       set: (o) => { Object.assign(window.__store, o); return Promise.resolve(); },
     }},
-    tabs: { query: () => Promise.resolve([{ id: 1, title: 'Globex hiring SRE in Pune | LinkedIn', url: 'https://linkedin.com/jobs/view/9' }]) },
+    tabs: { query: () => Promise.resolve([{ id: 1,
+      title: 'Backend Engineer - Bengaluru - Verloop - 2 to 4 years of experience',
+      url: 'https://www.naukri.com/job-listings-backend-engineer-verloop-bengaluru-2-to-4-years-160726502068' }]) },
     scripting: { executeScript: () => Promise.reject(new Error('not injectable in harness')) },
     runtime: { sendMessage: (m) => { window.__msgs.push(m.type); return Promise.resolve({ ok: true }); } },
     permissions: {
@@ -49,6 +51,7 @@ const driver = `
     out.pendingWhere = q('#pending .where').textContent;
     out.badgeAcknowledged = window.__msgs.includes('badge-seen');
     out.autoSaveLockedShut = q('#auto-save').disabled;
+    out.currentPageLabel = q('#page-title').textContent;
 
     q('#pending button[data-action="accept"]').click();
     await wait(250);
@@ -115,6 +118,8 @@ t.check('  role', r.pendingRole, 'Backend Engineer');
 t.check('  source and date', r.pendingWhere, 'linkedin.com · 2026-09-10');
 t.check('opening the popup acknowledges the badge', r.badgeAcknowledged, true);
 t.check('auto-save cannot be set before auto-detect', r.autoSaveLockedShut, true);
+t.check('the popup applies host-specific title rules (Naukri orders Role - City - Company)',
+  r.currentPageLabel, 'Verloop — Backend Engineer');
 
 t.check('accepting empties the queue', r.queueCleared, true);
 t.check('  and stores the application', r.savedCount, 1);
