@@ -19,6 +19,23 @@ Add findings under **Found while testing** as you hit them; no need to be tidy a
 
 <!-- Add here. Format: what you did, what happened, what you expected. A URL helps a lot. -->
 
+- [ ] **Auto-detect will miss most LinkedIn applications.** `looksLikeJobPage()` gates phrase-based
+      detection on the URL looking like a single posting, and only `/jobs/view/<id>` qualifies. But
+      Easy Apply usually happens from the search or collections page, where the posting renders in a
+      side pane and the URL stays `/jobs/search/?currentJobId=<id>` or
+      `/jobs/collections/recommended/?currentJobId=<id>`. Neither matches, so the confirmation is
+      ignored.
+      *Fix:* treat a `currentJobId` query parameter as qualifying, and use it for dedupe so the same
+      posting saved from a search page and from its own page does not appear twice.
+
+- [ ] **The Greenhouse / Lever / Ashby patterns in `JOB_URL` can never match.** They include the
+      hostname (`/lever\.co\/[^/]+\/[0-9a-f-]{8,}/`) but are tested against `pathname + search`,
+      which has no hostname in it. So `jobs.lever.co/acme/<uuid>` does not qualify at all. Greenhouse
+      only passes by accident, via the generic `/\/jobs?\/[0-9a-f-]{6,}/` rule.
+      *Fix:* test the host separately from the path, or drop the hostname from those patterns.
+      *Note:* only affects the phrase path — these sites' confirmation URLs still trigger via
+      `URL_HINTS` (`/confirmation`, `/thanks`), which is the more common route for them.
+
 - [ ] …
 
 ## Unverified — needs a real page to confirm
