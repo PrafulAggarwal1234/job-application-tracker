@@ -25,7 +25,8 @@
 
   <div class="box">
     <strong>The short version:</strong> this extension collects nothing. Your data is stored on your own
-    computer, is never transmitted anywhere, and nobody — including the developer — can see it.
+    computer, is never transmitted anywhere, and nobody — including the developer — can see it. It asks
+    for no site access unless you switch on automatic detection, which is off by default.
   </div>
 
   <h2>What is collected</h2>
@@ -43,6 +44,7 @@
   </p>
 
   <h2>Permissions</h2>
+  <p>Granted on install, and these never change:</p>
   <ul>
     <li><code>storage</code> — to keep your list on this device.</li>
     <li><code>activeTab</code> — to read the title and URL of the tab you are viewing, only at the
@@ -50,9 +52,28 @@
     <li><code>scripting</code> — to run a small reader on that page to pick out the company and role.</li>
   </ul>
   <p>
-    The extension requests no host permissions, so it has no standing access to any website. It cannot
-    read a page unless you click its icon while on that page, and it reads nothing beyond the job
-    details described above.
+    A default installation requests <strong>no access to any website</strong>. The extension cannot read
+    a page unless you click its icon while on that page.
+  </p>
+
+  <h2>Automatic detection (optional, off by default)</h2>
+  <p>
+    You can switch on <em>Detect applications automatically</em>, which notices when you have submitted
+    an application so you do not have to save it by hand. This needs standing access to job sites, so it
+    is an <strong>optional permission that is off until you turn it on</strong>. When you do, Chrome
+    shows you its own permission prompt naming the sites, and you can decline.
+  </p>
+  <p>The sites it covers are LinkedIn, Naukri, Indeed, Greenhouse, Lever, Ashby and Workday.</p>
+  <p>
+    While it is on, a script runs on those sites and watches for a submission confirmation. It looks only
+    for that confirmation and, when it finds one, reads the same job details described above. It does not
+    read your resume, your messages, your contact details, form fields, or anything else on the page, and
+    it still sends nothing anywhere — detected applications are written to the same local storage.
+  </p>
+  <p>
+    Switching the feature off revokes the site access as well as stopping the script. You can also
+    revoke it yourself at any time from <code>chrome://extensions</code>, and Chrome will show it as a
+    permission the extension is no longer using.
   </p>
 
   <h2>Deleting your data</h2>

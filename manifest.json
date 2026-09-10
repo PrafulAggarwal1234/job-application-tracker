@@ -1,9 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Job Application Tracker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Save any job posting with one click and track your applications. All data stays in your browser — nothing is ever uploaded.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Track this job application",
@@ -19,5 +23,17 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "optional_host_permissions": [
+    "*://*.linkedin.com/*",
+    "*://*.naukri.com/*",
+    "*://*.indeed.com/*",
+    "*://*.greenhouse.io/*",
+    "*://jobs.lever.co/*",
+    "*://jobs.ashbyhq.com/*",
+    "*://*.myworkdayjobs.com/*"
+  ]
 }

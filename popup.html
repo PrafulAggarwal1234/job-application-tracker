@@ -11,6 +11,11 @@
     <button id="export" class="ghost" type="button" title="Download all applications as CSV">Export CSV</button>
   </header>
 
+  <section id="pending-wrap" class="pending-wrap" hidden>
+    <h2 class="section-title">Detected — save these?</h2>
+    <ul id="pending" class="pending"></ul>
+  </section>
+
   <section class="capture">
     <div id="page-title" class="page-title">Reading this page…</div>
     <button id="save" class="primary" type="button">+ Save this page</button>
@@ -23,8 +28,26 @@
     Nothing tracked yet. Open a job posting and hit <strong>Save this page</strong>.
   </p>
 
+  <section class="settings">
+    <label class="row-toggle">
+      <input type="checkbox" id="auto-detect">
+      <span>
+        <strong>Detect applications automatically</strong>
+        <em id="auto-detect-help">Asks permission for LinkedIn, Naukri, Indeed and common careers pages.</em>
+      </span>
+    </label>
+    <label class="row-toggle sub">
+      <input type="checkbox" id="auto-save" disabled>
+      <span>
+        <strong>Save without asking me</strong>
+        <em>Detected applications go straight into the list. Delete any you don't want.</em>
+      </span>
+    </label>
+  </section>
+
   <footer>🔒 Stored only in this browser. Nothing is uploaded, ever.</footer>
 
+  <script src="shared.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

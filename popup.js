@@ -1,23 +1,25 @@
 'use strict';
 
 const KEY = 'applications';
+const PENDING = 'pending';
+const SETTINGS = 'settings';
 const STATUSES = ['Applied', 'Interviewing', 'Rejected', 'Offer'];
+const DEFAULT_SETTINGS = { autoDetect: false, autoSave: false };
 
 const $ = (id) => document.getElementById(id);
 const els = {
   list: $('list'), count: $('count'), empty: $('empty'),
   save: $('save'), pageTitle: $('page-title'), notice: $('notice'), export: $('export'),
+  pending: $('pending'), pendingWrap: $('pending-wrap'),
+  autoDetect: $('auto-detect'), autoSave: $('auto-save'), autoDetectHelp: $('auto-detect-help'),
 };
 
 let apps = [];
+let pending = [];
+let settings = Object.assign({}, DEFAULT_SETTINGS);
 let current = null; // { company, role, url, title } for the active tab
 
 /* ---------- storage ---------- */
-
-async function loadApps() {
-  const stored = await chrome.storage.local.get(KEY);
-  return Array.isArray(stored[KEY]) ? stored[KEY] : [];
-}
 
 async function persist() {
   await chrome.storage.local.set({ [KEY]: apps });
@@ -25,142 +27,16 @@ async function persist() {
 
 /* ---------- page reading ---------- */
 
-// Runs in the page, only after the user clicks the toolbar icon (activeTab).
-// Must be fully self-contained: it is serialised and injected.
-function scrapeJobPage() {
-  const clean = (s) => (typeof s === 'string' ? s : '').replace(/\s+/g, ' ').trim();
-  const pick = (selectors) => {
-    for (const sel of selectors) {
-      const el = document.querySelector(sel);
-      const text = el ? clean(el.textContent) : '';
-      if (text) return text;
-    }
-    return '';
-  };
-
-  const host = location.hostname.replace(/^www\./, '');
-  let role = '';
-  let company = '';
-
-  if (host.endsWith('linkedin.com')) {
-    role = pick([
-      '.job-details-jobs-unified-top-card__job-title',
-      '.jobs-unified-top-card__job-title',
-      '.topcard__title',
-      'h1',
-    ]);
-    company = pick([
-      '.job-details-jobs-unified-top-card__company-name a',
-      '.job-details-jobs-unified-top-card__company-name',
-      '.jobs-unified-top-card__company-name',
-      '.topcard__org-name-link',
-    ]);
-  } else if (host.endsWith('naukri.com')) {
-    role = pick(['[class*="jd-header-title"]', 'h1']);
-    company = pick(['[class*="jd-header-comp-name"] a', '[class*="jd-header-comp-name"]', '.comp-name']);
-  } else if (host.includes('indeed.')) {
-    role = pick(['[data-testid="jobsearch-JobInfoHeader-title"]', '.jobsearch-JobInfoHeader-title', 'h1']);
-    company = pick([
-      '[data-testid="inlineHeader-companyName"]',
-      '[data-company-name="true"]',
-      '.jobsearch-CompanyInfoContainer a',
-    ]);
-  }
-
-  // schema.org JobPosting — how most ATS pages (Greenhouse, Lever, Workday, Ashby) describe themselves.
-  if (!role || !company) {
-    for (const node of document.querySelectorAll('script[type="application/ld+json"]')) {
-      let data;
-      try { data = JSON.parse(node.textContent); } catch (e) { continue; }
-      const items = [].concat(data, (data && data['@graph']) || []);
-      for (const item of items) {
-        if (!item || item['@type'] !== 'JobPosting') continue;
-        const org = item.hiringOrganization;
-        const orgName = typeof org === 'string' ? org : (org && org.name) || '';
-        role = role || clean(item.title);
-        company = company || clean(orgName);
-      }
-    }
-  }
-
-  if (!role) role = pick(['h1']);
-  if (!company) {
-    const og = document.querySelector('meta[property="og:site_name"]');
-    company = clean(og && og.content);
-  }
-
-  return { role, company, title: clean(document.title), url: location.href };
-}
 
 // Last-resort guesses from a page title, e.g.
 //   "Acme hiring Backend Engineer in Bengaluru | LinkedIn"
 //   "Backend Engineer at Acme"
 //   "Backend Engineer - Acme Careers"
-function splitTitle(rawTitle) {
-  const SITES = /\s*[|·—–\-]\s*(linkedin|naukri(\.com)?|indeed(\.com)?|glassdoor|monster|shine|instahyre|wellfound|angellist|greenhouse|lever|workday|ashby|careers?|jobs?|job search|hiring)\s*$/i;
 
-  let t = (rawTitle || '').replace(/\s+/g, ' ').trim();
-  while (SITES.test(t)) t = t.replace(SITES, '');
 
-  let m = t.match(/^(.+?)\s+(?:is\s+)?hiring\s+(?:an?\s+)?(.+?)(?:\s+in\s+.+)?$/i);
-  if (m) return { company: m[1], role: m[2] };
-
-  // Naukri renders "<Role> Job in <Company> at <Location>", so " in " wins over " at " here.
-  m = t.match(/^(.+?)\s+jobs?\s+in\s+(.+?)(?:\s+at\s+.+)?$/i);
-  if (m) return { role: m[1], company: m[2] };
-
-  m = t.match(/^(.+?)\s+(?:at|@)\s+(.+)$/i);
-  if (m) return { role: m[1], company: m[2] };
-
-  m = t.match(/^(.+?)\s*[|·—–]\s*(.+)$/);
-  if (m) return { role: m[1], company: m[2] };
-
-  m = t.match(/^(.+?)\s+-\s+(.+)$/);
-  if (m) return { role: m[1], company: m[2] };
-
-  return { role: t, company: '' };
-}
-
-const tidy = (s) => (s || '').replace(/\s+/g, ' ').replace(/\s*[|·—–-]\s*$/, '').trim();
-
-// A company scraped out of a page title tends to keep a domain or a "Careers" tail.
-const tidyCompany = (s) =>
-  tidy(tidy(s).replace(/\.(com|co|co\.in|in|io|ai|jobs|net|org)$/i, '').replace(/\s+(careers?|jobs?)$/i, ''));
-
-async function readActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return null;
-
-  let scraped = null;
-  try {
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: scrapeJobPage,
-    });
-    scraped = result && result.result;
-  } catch (e) {
-    // chrome:// pages, the Web Store, PDFs and file:// URLs cannot be injected into.
-    // Title + URL from the tab itself is still enough to save something useful.
-  }
-
-  const title = (scraped && scraped.title) || tab.title || '';
-  const url = (scraped && scraped.url) || tab.url || '';
-  const guess = splitTitle(title);
-
-  return {
-    title,
-    url,
-    role: tidy((scraped && scraped.role) || guess.role),
-    company: tidyCompany((scraped && scraped.company) || guess.company),
-  };
-}
 
 /* ---------- rendering ---------- */
 
-function todayISO() {
-  const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-}
 
 function render() {
   els.list.textContent = '';
@@ -233,6 +109,71 @@ function field(cls, value, placeholder) {
   input.value = value || '';
   input.placeholder = placeholder;
   return input;
+}
+
+function renderPending() {
+  els.pending.textContent = '';
+  els.pendingWrap.hidden = pending.length === 0;
+
+  for (const item of pending) {
+    const li = document.createElement('li');
+    li.dataset.id = item.id;
+
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = item.company || 'Unknown company';
+
+    const what = document.createElement('div');
+    what.className = 'what';
+    what.textContent = item.role || 'Unknown role';
+
+    const where = document.createElement('div');
+    where.className = 'where';
+    try {
+      where.textContent = `${new URL(item.url).hostname.replace(/^www\./, '')} · ${item.date}`;
+    } catch (e) {
+      where.textContent = item.date;
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+
+    const accept = document.createElement('button');
+    accept.type = 'button';
+    accept.className = 'accept';
+    accept.dataset.action = 'accept';
+    accept.textContent = 'Save';
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'ghost';
+    dismiss.dataset.action = 'dismiss';
+    dismiss.textContent = 'Not this one';
+
+    actions.append(accept, dismiss);
+    li.append(who, what, where, actions);
+    els.pending.append(li);
+  }
+}
+
+async function resolvePending(id, keep) {
+  const item = pending.find((p) => p.id === id);
+  pending = pending.filter((p) => p.id !== id);
+
+  if (keep && item) {
+    delete item.detectedBy;
+    apps.unshift(item);
+    await chrome.storage.local.set({ [KEY]: apps, [PENDING]: pending });
+    render();
+    highlight(item.id);
+    notify('Saved. Edit anything the detector got wrong.');
+  } else {
+    await chrome.storage.local.set({ [PENDING]: pending });
+    notify('Dismissed.');
+  }
+
+  renderPending();
+  chrome.runtime.sendMessage({ type: 'badge-seen' }).catch(() => {});
 }
 
 function notify(message, isWarning) {
@@ -341,6 +282,63 @@ function exportCSV() {
   notify(`Exported ${apps.length} application${apps.length === 1 ? '' : 's'}.`);
 }
 
+/* ---------- auto-detect settings ---------- */
+
+async function saveSettings() {
+  await chrome.storage.local.set({ [SETTINGS]: settings });
+  await chrome.runtime.sendMessage({ type: 'sync-registration' }).catch(() => {});
+}
+
+function paintSettings(grantedCount) {
+  els.autoDetect.checked = settings.autoDetect;
+  els.autoSave.checked = settings.autoSave;
+  els.autoSave.disabled = !settings.autoDetect;
+  if (typeof grantedCount === 'number' && settings.autoDetect) {
+    els.autoDetectHelp.textContent = `Watching ${grantedCount} site${grantedCount === 1 ? '' : 's'} for submitted applications.`;
+  }
+}
+
+async function onAutoDetectToggled() {
+  if (!els.autoDetect.checked) {
+    settings.autoDetect = false;
+    settings.autoSave = false;
+    await saveSettings();
+    await chrome.permissions.remove({ origins: ALL_SITE_PATTERNS }).catch(() => {});
+    paintSettings();
+    notify('Auto-detect off. Site access revoked.');
+    return;
+  }
+
+  // Chrome closes the popup while its own permission dialog is up on some
+  // platforms, so persist nothing until we know the answer.
+  let granted = false;
+  try {
+    granted = await chrome.permissions.request({ origins: ALL_SITE_PATTERNS });
+  } catch (e) {
+    granted = false;
+  }
+
+  if (!granted) {
+    els.autoDetect.checked = false;
+    paintSettings();
+    notify('Auto-detect needs access to those job sites to work.', true);
+    return;
+  }
+
+  settings.autoDetect = true;
+  await saveSettings();
+  paintSettings(SUPPORTED_SITES.length);
+  notify('On. Apply to a job and it will show up here.');
+}
+
+async function onAutoSaveToggled() {
+  settings.autoSave = els.autoSave.checked;
+  await saveSettings();
+  notify(settings.autoSave
+    ? 'Detected applications will save straight to the list.'
+    : 'Detected applications will wait for your confirmation.');
+}
+
 /* ---------- wiring ---------- */
 
 els.save.addEventListener('click', saveCurrentPage);
@@ -349,10 +347,38 @@ els.list.addEventListener('change', (e) => updateFrom(e.target));
 els.list.addEventListener('click', (e) => {
   if (e.target.dataset.action === 'delete') deleteFrom(e.target);
 });
+els.pending.addEventListener('click', (e) => {
+  const action = e.target.dataset.action;
+  if (action !== 'accept' && action !== 'dismiss') return;
+  const li = e.target.closest('li[data-id]');
+  if (li) resolvePending(li.dataset.id, action === 'accept');
+});
+els.autoDetect.addEventListener('change', onAutoDetectToggled);
+els.autoSave.addEventListener('change', onAutoSaveToggled);
 
 (async function init() {
-  apps = await loadApps();
+  const stored = await chrome.storage.local.get([KEY, PENDING, SETTINGS]);
+  apps = Array.isArray(stored[KEY]) ? stored[KEY] : [];
+  pending = Array.isArray(stored[PENDING]) ? stored[PENDING] : [];
+  settings = Object.assign({}, DEFAULT_SETTINGS, stored[SETTINGS] || {});
+
   render();
+  renderPending();
+
+  const granted = await chrome.permissions.getAll().catch(() => ({ origins: [] }));
+  const origins = granted.origins || [];
+
+  // On some platforms Chrome closes the popup while its own permission dialog is
+  // open, so the grant lands but onAutoDetectToggled never gets to save the flag.
+  // Treat a live grant as the intent it was, and repair the setting.
+  if (!settings.autoDetect && ALL_SITE_PATTERNS.some((p) => origins.includes(p))) {
+    settings.autoDetect = true;
+    await saveSettings();
+  }
+  paintSettings(origins.length);
+
+  // Opening the popup counts as having seen whatever the badge was reporting.
+  chrome.runtime.sendMessage({ type: 'badge-seen' }).catch(() => {});
 
   current = await readActiveTab();
   if (!current || !current.url) {

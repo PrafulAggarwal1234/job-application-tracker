@@ -21,11 +21,16 @@ wrong just by typing over it.
 Move each application through Applied → Interviewing → Rejected or Offer as things progress, and export
 the whole list to CSV whenever you want it in a spreadsheet.
 
+Tired of remembering to save? Turn on automatic detection and the extension notices when you've
+submitted an application and offers to record it. It's off by default, it asks your permission for the
+job sites it watches, and turning it off revokes that access again.
+
 WHY IT'S PRIVATE BY DESIGN
 • No account, no sign-up, no server.
 • Your applications are stored on your own computer, in Chrome's local storage.
 • No analytics, no tracking, no third-party services.
-• The extension requests no site access. It can only read a page in the moment you click its icon.
+• A default install requests no site access at all. It can only read a page in the moment you click
+  its icon. Automatic detection is opt-in and revocable.
 • Open source — read every line at
   https://github.com/PrafulAggarwal1234/job-application-tracker
 
@@ -33,6 +38,7 @@ FEATURES
 • One-click save from any job page
 • Automatic company and role detection, fully editable
 • Status tracking: Applied, Interviewing, Rejected, Offer
+• Optional automatic detection — notices when you've submitted an application
 • Duplicate detection so you don't save the same posting twice
 • One-click CSV export
 • Light and dark mode
@@ -51,7 +57,15 @@ Lets the user save job postings they have applied to and track the status of eac
 only at the moment the user clicks the extension icon.
 
 **scripting** — Injects a small script into that one page, on that click, to read the company name and
-job title from the posting so the user does not have to type them.
+job title from the posting so the user does not have to type them. Also used to register the optional
+detection script described below, once the user has granted access.
+
+**Optional host permissions** (LinkedIn, Naukri, Indeed, Greenhouse, Lever, Ashby, Workday) — Requested
+at runtime, only if the user switches on "Detect applications automatically", and revoked when they
+switch it off. A default installation requests no site access at all. When granted, a content script
+watches those sites for an application-submission confirmation so the user's application is recorded
+without them having to remember to save it. It reads only the job title and company, and transmits
+nothing.
 
 ## Privacy
 - Privacy policy URL: `https://prafulaggarwal1234.github.io/job-application-tracker/`

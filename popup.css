@@ -192,3 +192,64 @@ footer {
   background: var(--panel);
   border-top: 1px solid var(--border);
 }
+
+/* ---------- detected (pending) queue ---------- */
+
+.section-title {
+  margin: 0;
+  padding: 10px 14px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--interviewing);
+}
+
+.pending-wrap { border-bottom: 1px solid var(--border); }
+.pending { list-style: none; margin: 0; padding: 0 14px 12px; }
+
+.pending li {
+  padding: 9px 10px;
+  margin-bottom: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--interviewing);
+  border-radius: 7px;
+}
+.pending li:last-child { margin-bottom: 0; }
+
+.pending .who { font-weight: 600; }
+.pending .what { font-size: 12px; color: var(--muted); }
+.pending .where { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.pending .actions { display: flex; gap: 6px; margin-top: 8px; }
+.pending .actions button { padding: 4px 10px; font-size: 12px; }
+
+.accept {
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent);
+  border: 1px solid transparent;
+}
+.accept:hover { filter: brightness(1.08); }
+
+/* ---------- settings ---------- */
+
+.settings {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.row-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.row-toggle.sub { padding-left: 20px; }
+.row-toggle input { margin: 2px 0 0; flex: none; cursor: pointer; }
+.row-toggle strong { display: block; font-size: 12px; font-weight: 600; }
+.row-toggle em { display: block; font-size: 11px; font-style: normal; color: var(--muted); }
+.row-toggle:has(input:disabled) { cursor: default; opacity: .5; }

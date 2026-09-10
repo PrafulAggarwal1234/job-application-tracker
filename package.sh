@@ -7,6 +7,7 @@ VERSION=$(python3 -c "import json;print(json.load(open('manifest.json'))['versio
 OUT="job-application-tracker-v${VERSION}.zip"
 
 rm -f "$OUT"
-zip -r -q "$OUT" manifest.json popup.html popup.css popup.js icons
+zip -r -q "$OUT" manifest.json popup.html popup.css popup.js \
+  shared.js scrape.js detector.js background.js icons
 echo "$OUT"
 unzip -l "$OUT"
