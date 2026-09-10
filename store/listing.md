@@ -60,5 +60,7 @@ job title from the posting so the user does not have to type them.
 
 ## Assets checklist
 - [x] 128x128 icon — `icons/icon128.png`
-- [ ] Screenshot 1280x800 or 640x400 — popup with 3-4 applications in different statuses
-- [ ] Screenshot 2 — a job page with the popup open, showing prefilled fields
+- [x] Screenshots, 1280x800 — `store/screenshots/` (regenerate with `node store/screenshots.js`)
+  - `1-list.png` — every application in one place
+  - `2-one-click.png` — one click on any job page, fields stay editable
+  - `3-private.png` — no account, no server, no tracking
