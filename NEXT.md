@@ -9,10 +9,11 @@ Add findings under **Found while testing** as you hit them; no need to be tidy a
 
 ## Fixed, awaiting release
 
-- [x] **Deleting a row had no recovery.** ✕ removed the entry instantly. Now removes it and offers
-      an **Undo** in the notice line, restoring at the original index. Chose undo over a confirmation
-      prompt: a confirm taxes every delete, undo only costs you on the rare mistake.
-      *(Undo lasts while the popup is open — the delete is already committed to storage.)*
+- [x] **Deleting a row had no confirmation.** ✕ removed the entry instantly. Now the first click turns
+      the ✕ into a small red **Sure?**; a second click deletes, and clicking anywhere else cancels.
+      Chosen over an undo because the popup closes the moment you click outside it, so an undo would
+      not survive a misclick-then-click-away — and a deleted posting cannot be reconstructed, since
+      its URL goes with it.
 
 ## Found while testing
 

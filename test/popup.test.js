@@ -77,17 +77,24 @@ const driver = `
     out.settingsAfterDisable = snap(window.__store.settings);
     out.accessRevoked = window.__revoked;
 
-    // deleting is recoverable while the popup is open
-    q('#list button[data-action="delete"]').click();
-    await wait(220);
-    out.afterDeleteCount = window.__store.applications.length;
-    out.undoOffered = !!q('#notice button[data-action="undo"]');
-    out.undoNotice = q('#notice span') ? q('#notice span').textContent : null;
+    // deleting takes two clicks, and anything else cancels
+    const del = () => q('#list button[data-action="delete"]');
+    del().click();
+    await wait(160);
+    out.armedLabel = del().textContent;
+    out.survivesFirstClick = window.__store.applications.length;
 
-    q('#notice button[data-action="undo"]').click();
+    document.querySelector('header h1').click();   // click elsewhere
+    await wait(160);
+    out.labelAfterClickAway = del().textContent;
+    out.survivesClickAway = window.__store.applications.length;
+
+    del().click();
+    await wait(160);
+    del().click();
     await wait(220);
-    out.afterUndoCount = window.__store.applications.length;
-    out.afterUndoCompany = q('#list input.company') ? q('#list input.company').value : null;
+    out.afterTwoClicks = window.__store.applications.length;
+    out.listEmpty = !q('#list li');
   } catch (e) { out.threw = e.message; }
   out.errors = window.__err;
   document.getElementById('RESULT').textContent = JSON.stringify(out);
@@ -124,10 +131,11 @@ t.check('auto-save persists', r.settingsAfterAutoSave, { autoDetect: true, autoS
 t.check('disabling clears both flags', r.settingsAfterDisable, { autoDetect: false, autoSave: false });
 t.check('  and revokes the site access', r.accessRevoked, true);
 
-t.check('delete removes the row', r.afterDeleteCount, 0);
-t.check('  and offers an undo instead of a confirmation', r.undoOffered, true);
-t.check('  naming what went', r.undoNotice, 'Deleted Acme. ');
-t.check('undo restores it', r.afterUndoCount, 1);
-t.check('  with its fields intact', r.afterUndoCompany, 'Acme');
+t.check('one click on the delete button only arms it', r.armedLabel, 'Sure?');
+t.check('  the application survives that first click', r.survivesFirstClick, 1);
+t.check('clicking elsewhere cancels', r.labelAfterClickAway, '✕');
+t.check('  and the application is still there', r.survivesClickAway, 1);
+t.check('two clicks delete it', r.afterTwoClicks, 0);
+t.check('  and the list empties', r.listEmpty, true);
 
 t.done();

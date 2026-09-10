@@ -18,7 +18,7 @@ let apps = [];
 let pending = [];
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let current = null; // { company, role, url, title } for the active tab
-let lastDeleted = null; // { app, index } — recoverable while the popup stays open
+let armedDeleteId = null; // row whose ✕ has been clicked once and awaits confirmation
 
 /* ---------- storage ---------- */
 
@@ -40,6 +40,7 @@ async function persist() {
 
 
 function render() {
+  armedDeleteId = null;
   els.list.textContent = '';
   els.count.textContent = String(apps.length);
   els.empty.hidden = apps.length > 0;
@@ -177,24 +178,6 @@ async function resolvePending(id, keep) {
   chrome.runtime.sendMessage({ type: 'badge-seen' }).catch(() => {});
 }
 
-function offerUndo(app) {
-  els.notice.textContent = '';
-  els.notice.hidden = false;
-  els.notice.classList.add('warn');
-
-  const label = document.createElement('span');
-  label.textContent = `Deleted ${app.company || app.role || 'that entry'}. `;
-
-  const undo = document.createElement('button');
-  undo.type = 'button';
-  undo.className = 'link';
-  undo.dataset.action = 'undo';
-  undo.textContent = 'Undo';
-  undo.addEventListener('click', undoDelete);
-
-  els.notice.append(label, undo);
-}
-
 function notify(message, isWarning) {
   els.notice.textContent = message || '';
   els.notice.hidden = !message;
@@ -260,29 +243,38 @@ async function updateFrom(target) {
   await persist();
 }
 
+function disarmDelete() {
+  if (!armedDeleteId) return;
+  const button = els.list.querySelector(`li[data-id="${armedDeleteId}"] button[data-action="delete"]`);
+  if (button) {
+    button.textContent = '✕';
+    button.title = 'Delete';
+    button.classList.remove('armed');
+  }
+  armedDeleteId = null;
+}
+
+// Two clicks, because a single misclick would otherwise destroy a record the
+// user cannot reconstruct — the posting URL goes with it.
 async function deleteFrom(button) {
   const li = button.closest('li[data-id]');
   if (!li) return;
-  const index = apps.findIndex((a) => a.id === li.dataset.id);
-  if (index === -1) return;
+  const id = li.dataset.id;
 
-  lastDeleted = { app: apps[index], index };
-  apps.splice(index, 1);
+  if (armedDeleteId !== id) {
+    disarmDelete();
+    armedDeleteId = id;
+    button.textContent = 'Sure?';
+    button.title = 'Click again to delete';
+    button.classList.add('armed');
+    return;
+  }
+
+  armedDeleteId = null;
+  apps = apps.filter((a) => a.id !== id);
   await persist();
   render();
-  offerUndo(lastDeleted.app);
-}
-
-async function undoDelete() {
-  if (!lastDeleted) return;
-  const { app, index } = lastDeleted;
-  lastDeleted = null;
-
-  apps.splice(Math.min(index, apps.length), 0, app);
-  await persist();
-  render();
-  highlight(app.id);
-  notify('Restored.');
+  notify('Deleted.');
 }
 
 /* ---------- CSV ---------- */
@@ -389,6 +381,11 @@ els.pending.addEventListener('click', (e) => {
   if (li) resolvePending(li.dataset.id, action === 'accept');
 });
 els.autoDetect.addEventListener('change', onAutoDetectToggled);
+document.addEventListener('click', (e) => {
+  if (!armedDeleteId) return;
+  if (e.target.dataset && e.target.dataset.action === 'delete') return;
+  disarmDelete();
+});
 els.autoSave.addEventListener('change', onAutoSaveToggled);
 
 (async function init() {
